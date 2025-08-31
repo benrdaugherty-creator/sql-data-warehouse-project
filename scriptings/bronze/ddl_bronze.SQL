@@ -1,98 +1,71 @@
---This script creates tables in the 'bronze' schema
+--column names in bronze layer 1 to 1, exactly like source system
 
-CREATE OR ALTER PROCEDURE broze.load_broze 
-AS
-BEGIN
-	--declare variables to figure out load time
-	DECLARE @start_time DATETIME, @end_time DATETIME;
-	BEGIN TRY
-			-- Load CRM data
+CREATE TABLE broze.crm_cust_info (
+cst_id INT, 
+cst_key NVARCHAR(50), 
+cst_firstname NVARCHAR(50),
+cst_lastname NVARCHAR(50),
+cst_marital_status NVARCHAR(50),
+cst_gndr NVARCHAR(50),
+cst_create_date DATE
+);
 
-		Print '=========================================';
-		Print 'Loading Bronze Layer' ;
-		Print '=========================================';
+CREATE TABLE broze.crm_prd_info (
+prd_id INT, 
+prd_key NVARCHAR(50), 
+prd_nm NVARCHAR(50),
+prd_cost INT,
+prd_line NVARCHAR(50),
+prd_start_dt DATETIME,
+prd_end_dt DATETIME
+);
 
-		Print '-----------------------------------------';
-		Print 'Loading CRM Tables' 
-		Print '-----------------------------------------' ;
+CREATE TABLE broze.crm_sales_detail (
+sls_ord_num NVARCHAR(50), 
+sls_prd_num NVARCHAR(50), 
+sls_cust_id INT,
+sls_order_dt INT,
+sls_ship_dt INT,
+sls_due_dt INT,
+sls_sales INT,
+sls_quantity INT,
+sls_price INT,
+);
 
-		SET @start_time = GETDATE();
+DROP TABLE broze.sales_detail
 
-		Print 'Truncating Table: bronze.crm_cust_info';
-			TRUNCATE TABLE broze.crm_cust_info;
-			BULK INSERT broze.crm_cust_info
-			FROM 'C:\Users\benrd\OneDrive\Desktop\Data Sets\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_crm\cust_info.csv'
-			WITH (
-				FIRSTROW = 2,
-				FIELDTERMINATOR = ',',
-				TABLOCK
-			);
+CREATE TABLE broze.erp_loc_a101 (
+cid NVARCHAR(50), 
+cntry NVARCHAR(50));
 
-			SET @end_time = GETDATE();
-			print '>> Load Duration: ' + CAST(DATEDIFF(second, @start_time, @end_time) AS NVARCHAR) + ' seconds' 
+CREATE TABLE broze.erp_cust_az12 (
+cid NVARCHAR(50), 
+bdate DATE,
+gen NVARCHAR(50)
+);
 
-			TRUNCATE TABLE broze.crm_prd_info;
-			BULK INSERT broze.crm_prd_info
-			FROM 'C:\Users\benrd\OneDrive\Desktop\Data Sets\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_crm\prd_info.csv'
-			WITH (
-				FIRSTROW = 2,
-				FIELDTERMINATOR = ',',
-				TABLOCK
-			);
+CREATE TABLE broze.erp_px_cat_g1v2 (
+id NVARCHAR(50), 
+cat NVARCHAR(50),
+subcat NVARCHAR(50),
+maintenance NVARCHAR(50)
+);
 
-			TRUNCATE TABLE broze.crm_sales_detail;
-			BULK INSERT broze.crm_sales_detail
-			FROM 'C:\Users\benrd\OneDrive\Desktop\Data Sets\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_crm\sales_details.csv'
-			WITH (
-				FIRSTROW = 2,
-				FIELDTERMINATOR = ',',
-				TABLOCK
-			);
+--in SSMS you need tsql logic to change a table
+--U = user defined table
+-- ex: IF Object_ID ('Table name', 'U') IS NOT NULL DROP TABLE TAble name... then create it from scratch
 
-			-- Load ERP data
+--Bulk insert: loads mass amount of data quickly from same a txt file
+--Does go row by row, but one operation that loads all data in one go into the DB
 
-		Print '-----------------------------------------';
-		Print 'Loading ERP Tables' 
-		Print '-----------------------------------------' ;
-			TRUNCATE TABLE broze.erp_cust_az12;
-			BULK INSERT broze.erp_cust_az12
-			FROM 'C:\Users\benrd\OneDrive\Desktop\Data Sets\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_erp\CUST_AZ12.csv'
-			WITH (
-				FIRSTROW = 2,
-				FIELDTERMINATOR = ',',
-				TABLOCK
-			);
+--Load from 1st table to seed the DB from csv file
 
-			TRUNCATE TABLE DataWarehouse.broze.erp_LOC_A101;
-			BULK INSERT DataWarehouse.broze.erp_LOC_A101
-			FROM 'C:\Users\benrd\OneDrive\Desktop\Data Sets\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_erp\LOC_A101.csv'
-			WITH (
-				FIRSTROW = 2,
-				FIELDTERMINATOR = ',',
-				TABLOCK
-			);
+--(not normal insert)
+--Truncate (quickly delete all rows from a table, setting it to an empty state), then load
 
-			TRUNCATE TABLE DataWarehouse.broze.erp_px_cat_g1v2;
-			BULK INSERT DataWarehouse.broze.erp_px_cat_g1v2
-			FROM 'C:\Users\benrd\OneDrive\Desktop\Data Sets\sql-data-warehouse-project\sql-data-warehouse-project\datasets\source_erp\px_cat_g1v2.csv'
-			WITH (
-				FIRSTROW = 2,
-				FIELDTERMINATOR = ',',
-				TABLOCK
-			);
-	END TRY
-	BEGIN CATCH
-		print '======================';
-		print 'error occured during loading bronze layer';
-		print 'error message' + ERROR_MESSAGE();
-		print 'Error message' + CAST(error_number() AS NVARCHAR);
-		print '======================';
-	END CATCH
-END;
---select * from broze.erp_px_cat_g1v2
+--Quality check, make sure data is correct, hasn't shifted, etc
 
---select count(*) from broze.crm_cust_info
+--Create stored procedure
 
---Execute Stored proc
-
-Exec broze.load_broze
+USE DataWarehouse
+GO
